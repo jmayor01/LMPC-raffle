@@ -18,20 +18,24 @@ def get_base64_image(image_path):
 
 
 def play_winner_sound(file_path):
+
     if os.path.exists(file_path):
+
         with open(file_path, "rb") as f:
             data = f.read()
 
         b64 = base64.b64encode(data).decode()
-        audio_id = int(time.time() * 1000)
+
+        # force browser to reload audio every draw
+        audio_id = str(time.time()).replace(".", "")
 
         audio_html = f"""
-        <audio id="audio_{audio_id}" autoplay>
+        <audio id="winner_{audio_id}" autoplay>
             <source src="data:audio/mp4;base64,{b64}" type="audio/mp4">
         </audio>
         """
-        st.markdown(audio_html, unsafe_allow_html=True)
 
+        st.markdown(audio_html, unsafe_allow_html=True)
 
 def load_names_from_excel(uploaded_file):
     df = pd.read_excel(uploaded_file, engine="openpyxl")
@@ -273,9 +277,36 @@ if start_draw:
             delay += 0.0015
 
         # Final winners display
-        final_html = "".join(
-            [f'<div class="multi-winner-item">🏆 {name}</div>' for name in selected_winners]
-        )
+        if winner_count == 1:
+
+    winner_name = selected_winners[0]
+
+    draw_placeholder.markdown(
+        f"""
+        <div class="winner-box">
+            🏆 {winner_name} 🏆
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+else:
+
+    final_html = "".join(
+        [f'<div class="multi-winner-item">🏆 {name}</div>' for name in selected_winners]
+    )
+
+    draw_placeholder.markdown(
+        f"""
+        <div class="multi-winner-box">
+            <div class="multi-winner-title">WINNERS FOR: {prize}</div>
+            <div class="multi-winner-grid">
+                {final_html}
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
         draw_placeholder.markdown(
             f"""
