@@ -16,37 +16,34 @@ def get_base64_image(image_path):
             return base64.b64encode(f.read()).decode()
     return ""
 
+
 def play_winner_sound(file_path):
-
     if os.path.exists(file_path):
-
         with open(file_path, "rb") as f:
             data = f.read()
 
         b64 = base64.b64encode(data).decode()
+        audio_id = int(time.time() * 1000)
 
         audio_html = f"""
-        <audio autoplay>
+        <audio id="audio_{audio_id}" autoplay>
             <source src="data:audio/mp4;base64,{b64}" type="audio/mp4">
         </audio>
         """
-
         st.markdown(audio_html, unsafe_allow_html=True)
 
 
 def load_names_from_excel(uploaded_file):
-
     df = pd.read_excel(uploaded_file, engine="openpyxl")
 
     names = (
-        df.iloc[:,0]
+        df.iloc[:, 0]
         .dropna()
         .astype(str)
         .str.strip()
-        .drop_duplicates()
-        .tolist()
     )
 
+    names = names[names != ""].drop_duplicates().tolist()
     return names
 
 
@@ -65,58 +62,89 @@ if "winners" not in st.session_state:
 # -------------------------
 st.markdown("""
 <style>
-
 .block-container{
-padding-top:1rem;
+    padding-top:1rem;
 }
 
 .main-title{
-text-align:center;
-font-size:42px;
-font-weight:800;
-color:#2c3e50;
+    text-align:center;
+    font-size:42px;
+    font-weight:800;
+    color:#2c3e50;
 }
 
 .sub-title{
-text-align:center;
-font-size:22px;
-color:#6c757d;
-margin-bottom:10px;
+    text-align:center;
+    font-size:22px;
+    color:#6c757d;
+    margin-bottom:10px;
 }
 
 .draw-title{
-text-align:center;
-font-size:30px;
-font-weight:800;
-color:#ff4b4b;
-margin-top:10px;
+    text-align:center;
+    font-size:30px;
+    font-weight:800;
+    color:#ff4b4b;
+    margin-top:10px;
 }
 
 .draw-box{
-background:#111;
-padding:70px;
-border-radius:20px;
-text-align:center;
-font-size:60px;
-color:#00ff88;
+    background:#111;
+    padding:70px;
+    border-radius:20px;
+    text-align:center;
+    font-size:60px;
+    color:#00ff88;
+    min-height:180px;
+}
+
+.multi-winner-box{
+    background:#111;
+    padding:40px;
+    border-radius:20px;
+    color:white;
+}
+
+.multi-winner-title{
+    text-align:center;
+    font-size:28px;
+    font-weight:800;
+    color:gold;
+    margin-bottom:20px;
+}
+
+.multi-winner-grid{
+    display:grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap:16px;
+}
+
+.multi-winner-item{
+    background:#1c1c1c;
+    border:2px solid gold;
+    border-radius:14px;
+    padding:16px;
+    text-align:center;
+    font-size:28px;
+    font-weight:bold;
+    color:gold;
 }
 
 .winner-box{
-background:#111;
-padding:80px;
-border-radius:20px;
-text-align:center;
-font-size:90px;
-font-weight:bold;
-color:gold;
+    background:#111;
+    padding:80px;
+    border-radius:20px;
+    text-align:center;
+    font-size:90px;
+    font-weight:bold;
+    color:gold;
 }
 
 .small-note{
-text-align:center;
-color:#6c757d;
-font-size:14px;
+    text-align:center;
+    color:#6c757d;
+    font-size:14px;
 }
-
 </style>
 """, unsafe_allow_html=True)
 
@@ -125,15 +153,14 @@ font-size:14px;
 # Logo
 # -------------------------
 logo_b64 = get_base64_image("logo.png")
-
 if logo_b64:
     st.markdown(
-    f"""
-    <div style="text-align:center">
-    <img src="data:image/png;base64,{logo_b64}" width="150">
-    </div>
-    """,
-    unsafe_allow_html=True
+        f"""
+        <div style="text-align:center">
+            <img src="data:image/png;base64,{logo_b64}" width="150">
+        </div>
+        """,
+        unsafe_allow_html=True
     )
 
 
@@ -151,39 +178,25 @@ st.divider()
 # Sidebar
 # -------------------------
 st.sidebar.header("Upload Participants")
-
 uploaded_file = st.sidebar.file_uploader("Upload Excel File", type=["xlsx"])
 
 if uploaded_file is not None:
-
     try:
-
         st.session_state.participants = load_names_from_excel(uploaded_file)
-
         st.sidebar.success(f"{len(st.session_state.participants)} participants loaded")
-
     except Exception as e:
-
         st.sidebar.error(str(e))
 
-
 st.sidebar.header("Prize Setup")
-
 prize = st.sidebar.text_input("Prize Name", value="Special Prize")
-
-winner_count = st.sidebar.number_input(
-"Number of Winners",
-min_value=1,
-value=1
-)
-
+winner_count = st.sidebar.number_input("Number of Winners", min_value=1, value=1, step=1)
 start_draw = st.sidebar.button("🎡 START RAFFLE DRAW", use_container_width=True)
 
 
 # -------------------------
 # Metrics
 # -------------------------
-col1,col2,col3 = st.columns(3)
+col1, col2, col3 = st.columns(3)
 
 with col1:
     st.metric("Participants", len(st.session_state.participants))
@@ -193,9 +206,7 @@ with col2:
 
 with col3:
     previous = [w["Name"] for w in st.session_state.winners]
-
     remaining = len([p for p in st.session_state.participants if p not in previous])
-
     st.metric("Remaining Eligible", remaining)
 
 
@@ -205,21 +216,13 @@ with col3:
 show_list = st.toggle("Show Participant List", value=True)
 
 if show_list:
-
     st.subheader("Participant List")
 
     if st.session_state.participants:
-
-        df_names = pd.DataFrame(
-        st.session_state.participants,
-        columns=["Name"]
-        )
-
+        df_names = pd.DataFrame(st.session_state.participants, columns=["Name"])
         df_names.index = df_names.index + 1
         df_names.index.name = "No."
-
         st.dataframe(df_names, height=300, use_container_width=True)
-
     else:
         st.info("Upload an Excel file to display participants")
 
@@ -228,7 +231,6 @@ if show_list:
 # Draw Area
 # -------------------------
 st.markdown('<div class="draw-title">🎯 DRAW AREA</div>', unsafe_allow_html=True)
-
 draw_placeholder = st.empty()
 
 
@@ -236,64 +238,67 @@ draw_placeholder = st.empty()
 # Draw Logic
 # -------------------------
 if start_draw:
-
     available = st.session_state.participants.copy()
-
     previous = [w["Name"] for w in st.session_state.winners]
-
     available = [p for p in available if p not in previous]
 
     if len(available) < winner_count:
-
         st.error("Not enough participants remaining.")
-
     else:
+        # One draw, multiple winners
+        selected_winners = random.sample(available, winner_count)
 
-        winners = []
+        # Rolling animation
+        delay = 0.015
+        for _ in range(70):
+            preview_names = random.sample(available, min(winner_count, len(available)))
 
-        for i in range(winner_count):
-            
-            delay = 0.015
-
-            for _ in range(70):
-
-                name = random.choice(available)
-
-                draw_placeholder.markdown(
-                f'<div class="draw-box">{name}</div>',
-                unsafe_allow_html=True
-                )
-
-                time.sleep(delay)
-
-                delay += 0.0015
-
-
-            winner = random.choice(available)
-
-            draw_placeholder.markdown(
-            f'<div class="winner-box">🏆 {winner} 🏆</div>',
-            unsafe_allow_html=True
+            preview_html = "".join(
+                [f'<div class="multi-winner-item">{name}</div>' for name in preview_names]
             )
 
-            # play winner sound
-            play_winner_sound("winner.m4a")
+            draw_placeholder.markdown(
+                f"""
+                <div class="multi-winner-box">
+                    <div class="multi-winner-title">Drawing {winner_count} Winner(s)...</div>
+                    <div class="multi-winner-grid">
+                        {preview_html}
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
-            st.balloons()
+            time.sleep(delay)
+            delay += 0.0015
 
-            winners.append(winner)
+        # Final winners display
+        final_html = "".join(
+            [f'<div class="multi-winner-item">🏆 {name}</div>' for name in selected_winners]
+        )
 
-            available.remove(winner)
+        draw_placeholder.markdown(
+            f"""
+            <div class="multi-winner-box">
+                <div class="multi-winner-title">WINNERS FOR: {prize}</div>
+                <div class="multi-winner-grid">
+                    {final_html}
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
-            time.sleep(3)
+        play_winner_sound("winner.m4a")
+        st.balloons()
 
-
-        for w in winners:
-
+        for winner in selected_winners:
             st.session_state.winners.append({
-            "Prize":prize,
-            "Name":w
+                "Prize": prize,
+                "Name": winner
             })
+
+        time.sleep(2)
 
 
 # -------------------------
@@ -302,24 +307,18 @@ if start_draw:
 st.header("🏆 Winner Board")
 
 if st.session_state.winners:
-
     df_winners = pd.DataFrame(st.session_state.winners)
-
     df_winners.index = df_winners.index + 1
     df_winners.index.name = "No."
-
     st.dataframe(df_winners, use_container_width=True)
 
     csv = df_winners.to_csv(index=False).encode("utf-8")
-
     st.download_button(
-    "Download Winner Report",
-    csv,
-    "raffle_winners.csv",
-    "text/csv",
-    use_container_width=True
+        "Download Winner Report",
+        csv,
+        "raffle_winners.csv",
+        "text/csv",
+        use_container_width=True
     )
-
 else:
-
     st.info("No winners yet.")
