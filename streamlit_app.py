@@ -63,7 +63,7 @@ color:#ffd700;
 col1, col2, col3 = st.columns([1,2,1])
 
 with col2:
-    st.image("/mnt/data/logo.png", width=180)
+    st.image("logo.png", width=180)
 
 st.markdown('<div class="title">LODLOD MULTI-PURPOSE COOPERATIVE</div>', unsafe_allow_html=True)
 st.markdown('<div class="subtitle">🎉 LIVE RAFFLE DRAW 🎉</div>', unsafe_allow_html=True)
