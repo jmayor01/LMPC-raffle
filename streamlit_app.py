@@ -283,7 +283,7 @@ if start_draw:
 
 
             # play winner sound
-            autoplay_audio("winner.m4a")
+            play_winner_sound("winner.m4a")
 
             st.balloons()
 
