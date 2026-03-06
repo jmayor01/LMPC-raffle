@@ -264,9 +264,9 @@ if start_draw:
 
 
             # rolling animation
-            delay = 0.02
+            delay = 0.015
 
-            for _ in range(120):
+            for _ in range(70):
 
                 name = random.choice(available)
 
