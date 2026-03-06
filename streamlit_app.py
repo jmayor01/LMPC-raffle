@@ -16,25 +16,6 @@ def get_base64_image(image_path):
             return base64.b64encode(f.read()).decode()
     return ""
 
-
-def play_spin_sound(file_path):
-
-    if os.path.exists(file_path):
-
-        with open(file_path, "rb") as f:
-            data = f.read()
-
-        b64 = base64.b64encode(data).decode()
-
-        audio_html = f"""
-        <audio autoplay>
-            <source src="data:audio/mp4;base64,{b64}" type="audio/mp4">
-        </audio>
-        """
-
-        st.markdown(audio_html, unsafe_allow_html=True)
-
-
 def play_winner_sound(file_path):
 
     if os.path.exists(file_path):
@@ -271,10 +252,7 @@ if start_draw:
         winners = []
 
         for i in range(winner_count):
-
-            # start spin sound
-            play_spin_sound("spin.m4a")
-
+            
             delay = 0.015
 
             for _ in range(70):
