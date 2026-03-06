@@ -11,9 +11,14 @@ st.set_page_config(page_title="LMPC Raffle", layout="wide")
 st.markdown("""
 <style>
 
+.logo{
+text-align:center;
+margin-top:10px;
+}
+
 .title{
 text-align:center;
-font-size:50px;
+font-size:48px;
 font-weight:bold;
 color:#ff4b4b;
 }
@@ -24,7 +29,6 @@ font-size:24px;
 color:#444;
 }
 
-/* draw container */
 .draw-box{
 background:#111;
 border-radius:20px;
@@ -33,14 +37,12 @@ margin-top:20px;
 text-align:center;
 }
 
-/* roulette names */
 .roulette{
 font-size:60px;
 font-weight:bold;
 color:#00ff88;
 }
 
-/* winner highlight */
 .winner{
 font-size:90px;
 font-weight:bold;
@@ -53,13 +55,22 @@ color:#ffd700;
 # -------------------------
 # Centered Logo
 # -------------------------
-col1, col2, col3 = st.columns([1,2,1])
+st.markdown('<div class="logo">', unsafe_allow_html=True)
+st.image("logo.png", width=180)
+st.markdown('</div>', unsafe_allow_html=True)
 
-with col2:
-    st.image("logo.png", width=180)
+# -------------------------
+# Header
+# -------------------------
+st.markdown(
+    '<div class="title">LODLOD MULTI-PURPOSE COOPERATIVE</div>',
+    unsafe_allow_html=True
+)
 
-st.markdown('<div class="title">LODLOD MULTI-PURPOSE COOPERATIVE</div>', unsafe_allow_html=True)
-st.markdown('<div class="subtitle">🎉 LIVE RAFFLE DRAW 🎉</div>', unsafe_allow_html=True)
+st.markdown(
+    '<div class="subtitle">🎉 LIVE RAFFLE DRAW 🎉</div>',
+    unsafe_allow_html=True
+)
 
 st.divider()
 
@@ -73,7 +84,7 @@ if "winners" not in st.session_state:
     st.session_state.winners = []
 
 # -------------------------
-# Upload Participants
+# Upload Excel
 # -------------------------
 st.sidebar.header("Upload Participants")
 
@@ -100,9 +111,9 @@ with col3:
     st.metric("Remaining", remaining)
 
 # -------------------------
-# Toggle Participant List
+# Participant List Toggle
 # -------------------------
-show_list = st.toggle("Show Participant List")
+show_list = st.toggle("Show Participant List", value=True)
 
 if show_list:
 
@@ -167,7 +178,7 @@ if draw_button:
 
                 time.sleep(1)
 
-            # Spin animation
+            # Roulette animation
             for _ in range(60):
 
                 name = random.choice(available)
