@@ -207,21 +207,16 @@ if show_list:
 
     if st.session_state.participants:
 
-        df_names = pd.DataFrame(
-        st.session_state.participants,
-        columns=["Name"]
-        )
+       df_names = pd.DataFrame(
+    st.session_state.participants,
+    columns=["Name"]
+)
 
-        st.dataframe(df_names, height=300, use_container_width=True)
+# start numbering at 1 instead of 0
+df_names.index = df_names.index + 1
+df_names.index.name = "No."
 
-    else:
-        st.info("Upload an Excel file to display participants")
-
-
-# -------------------------
-# Draw Area
-# -------------------------
-st.markdown('<div class="draw-title">🎯 DRAW AREA</div>', unsafe_allow_html=True)
+st.dataframe(df_names, height=300, use_container_width=True)
 
 draw_placeholder = st.empty()
 
