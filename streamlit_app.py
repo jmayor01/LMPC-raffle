@@ -9,7 +9,7 @@ st.set_page_config(page_title="LMPC Raffle Draw", layout="wide")
 # ----------------------------
 # Load Logo
 # ----------------------------
-logo = Image.open("logo.jpg")
+logo = Image.open("logo.jpg.jpg")
 
 # ----------------------------
 # Custom Theme (Based on Logo)
