@@ -4,6 +4,7 @@ import random
 import time
 import os
 import base64
+import streamlit.components.v1 as components
 
 st.set_page_config(page_title="LMPC Raffle", layout="wide")
 
@@ -16,25 +17,31 @@ def get_base64_image(image_path):
             return base64.b64encode(f.read()).decode()
     return ""
 
-
 def play_winner_sound(file_path):
-
     if os.path.exists(file_path):
-
         with open(file_path, "rb") as f:
             data = f.read()
 
         b64 = base64.b64encode(data).decode()
-
         audio_id = str(time.time()).replace(".", "")
 
-        audio_html = f"""
-        <audio id="winner_{audio_id}" autoplay>
-            <source src="data:audio/mp4;base64,{b64}" type="audio/mp4">
-        </audio>
-        """
-
-        st.markdown(audio_html, unsafe_allow_html=True)
+        components.html(
+            f"""
+            <html>
+              <body>
+                <audio id="winner_{audio_id}">
+                  <source src="data:audio/mp4;base64,{b64}" type="audio/mp4">
+                </audio>
+                <script>
+                  const audio = document.getElementById("winner_{audio_id}");
+                  audio.currentTime = 0;
+                  audio.play().catch(err => console.log(err));
+                </script>
+              </body>
+            </html>
+            """,
+            height=0,
+        )
 
 
 def load_names_from_excel(uploaded_file):
