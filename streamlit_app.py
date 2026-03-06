@@ -316,6 +316,9 @@ st.header("🏆 Winner Board")
 if st.session_state.winners:
 
     df_winners = pd.DataFrame(st.session_state.winners)
+    # start numbering from 1
+    df_winners.index = df_winners.index + 1
+    df_winners.index.name = "No."
 
     st.dataframe(df_winners, use_container_width=True)
 
