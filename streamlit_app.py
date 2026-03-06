@@ -361,7 +361,8 @@ if start_draw:
             for draw_no in range(winner_count):
                 winner = random.choice(available)
 
-                wheel_placeholder.components.v1.html(
+                with wheel_placeholder:
+                    components.html(
                     spin_wheel_html(available, winner),
                     height=700,
                     scrolling=False
