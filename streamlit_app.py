@@ -27,7 +27,7 @@ def play_spin_sound(file_path):
         b64 = base64.b64encode(data).decode()
 
         audio_html = f"""
-        <audio autoplay loop>
+        <audio autoplay>
             <source src="data:audio/mp4;base64,{b64}" type="audio/mp4">
         </audio>
         """
