@@ -6,16 +6,11 @@ import time
 st.set_page_config(page_title="LMPC Raffle", layout="wide")
 
 # -------------------------
-# Custom Styling
+# Styling
 # -------------------------
 st.markdown("""
 <style>
 
-.stApp{
-background-color: var(--background-color);
-}
-
-/* Header */
 .title{
 text-align:center;
 font-size:50px;
@@ -26,30 +21,28 @@ color:#ff4b4b;
 .subtitle{
 text-align:center;
 font-size:24px;
-font-weight:500;
-color:#2c3e50;
+color:#444;
 }
 
-/* Draw container */
+/* draw container */
 .draw-box{
 background:#111;
 border-radius:20px;
-padding:50px;
+padding:60px;
 margin-top:20px;
 text-align:center;
-box-shadow:0px 8px 25px rgba(0,0,0,0.3);
 }
 
-/* Roulette names */
+/* roulette names */
 .roulette{
 font-size:60px;
 font-weight:bold;
 color:#00ff88;
 }
 
-/* Winner highlight */
+/* winner highlight */
 .winner{
-font-size:80px;
+font-size:90px;
 font-weight:bold;
 color:#ffd700;
 }
@@ -58,7 +51,7 @@ color:#ffd700;
 """, unsafe_allow_html=True)
 
 # -------------------------
-# Header with Logo
+# Centered Logo
 # -------------------------
 col1, col2, col3 = st.columns([1,2,1])
 
@@ -92,7 +85,7 @@ if uploaded_file:
     st.session_state.participants = names
 
 # -------------------------
-# Stats Dashboard
+# Dashboard
 # -------------------------
 col1,col2,col3 = st.columns(3)
 
@@ -107,21 +100,25 @@ with col3:
     st.metric("Remaining", remaining)
 
 # -------------------------
-# Participant List
+# Toggle Participant List
 # -------------------------
-st.subheader("Participant List")
+show_list = st.toggle("Show Participant List")
 
-if st.session_state.participants:
+if show_list:
 
-    df_names = pd.DataFrame(
-        st.session_state.participants,
-        columns=["Name"]
-    )
+    st.subheader("Participant List")
 
-    st.dataframe(df_names, height=300)
+    if st.session_state.participants:
+
+        df_names = pd.DataFrame(
+            st.session_state.participants,
+            columns=["Name"]
+        )
+
+        st.dataframe(df_names, height=300)
 
 # -------------------------
-# Prize Settings
+# Prize Setup
 # -------------------------
 st.sidebar.header("Prize Setup")
 
@@ -134,11 +131,6 @@ winner_count = st.sidebar.number_input(
 )
 
 draw_button = st.sidebar.button("🎡 START DRAW")
-
-# -------------------------
-# Draw Section (Highlighted)
-# -------------------------
-st.markdown("## 🎯 DRAW AREA")
 
 draw_placeholder = st.empty()
 
@@ -175,7 +167,7 @@ if draw_button:
 
                 time.sleep(1)
 
-            # Roulette animation
+            # Spin animation
             for _ in range(60):
 
                 name = random.choice(available)
