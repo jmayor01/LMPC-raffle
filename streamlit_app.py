@@ -3,7 +3,11 @@ import pandas as pd
 import random
 import time
 
-st.set_page_config(page_title="LMPC Raffle Draw", layout="wide")
+st.set_page_config(
+    page_title="LMPC Raffle Draw",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
 # ----------------------------
 # Styling
@@ -13,8 +17,10 @@ st.markdown("""
 
 .stApp{
 background-color:#f5f7fb;
+color:#000000;
 }
 
+/* Main titles */
 .title{
 text-align:center;
 font-size:55px;
@@ -28,6 +34,7 @@ font-size:28px;
 color:#6c757d;
 }
 
+/* Roulette display */
 .roulette{
 text-align:center;
 font-size:70px;
@@ -39,12 +46,18 @@ border-radius:20px;
 margin-top:20px;
 }
 
+/* Winner display */
 .winner{
 text-align:center;
 font-size:80px;
 font-weight:bold;
 color:#ff4b4b;
 padding:30px;
+}
+
+/* Fix text visibility in dark mode */
+[data-testid="stAppViewContainer"]{
+color:white;
 }
 
 </style>
