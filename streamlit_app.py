@@ -16,6 +16,7 @@ def get_base64_image(image_path):
             return base64.b64encode(f.read()).decode()
     return ""
 
+
 def play_spin_sound(file_path):
 
     if os.path.exists(file_path):
@@ -32,6 +33,25 @@ def play_spin_sound(file_path):
         """
 
         st.markdown(audio_html, unsafe_allow_html=True)
+
+
+def play_winner_sound(file_path):
+
+    if os.path.exists(file_path):
+
+        with open(file_path, "rb") as f:
+            data = f.read()
+
+        b64 = base64.b64encode(data).decode()
+
+        audio_html = f"""
+        <audio autoplay>
+            <source src="data:audio/mp4;base64,{b64}" type="audio/mp4">
+        </audio>
+        """
+
+        st.markdown(audio_html, unsafe_allow_html=True)
+
 
 def load_names_from_excel(uploaded_file):
 
@@ -213,8 +233,10 @@ if show_list:
         st.session_state.participants,
         columns=["Name"]
         )
+
         df_names.index = df_names.index + 1
         df_names.index.name = "No."
+
         st.dataframe(df_names, height=300, use_container_width=True)
 
     else:
@@ -250,14 +272,9 @@ if start_draw:
 
         for i in range(winner_count):
 
-        
-
-
-            # play spin sound
+            # start spin sound
             play_spin_sound("spin.m4a")
 
-
-            # rolling animation
             delay = 0.015
 
             for _ in range(70):
@@ -280,7 +297,6 @@ if start_draw:
             f'<div class="winner-box">🏆 {winner} 🏆</div>',
             unsafe_allow_html=True
             )
-
 
             # play winner sound
             play_winner_sound("winner.m4a")
@@ -310,7 +326,7 @@ st.header("🏆 Winner Board")
 if st.session_state.winners:
 
     df_winners = pd.DataFrame(st.session_state.winners)
-    # start numbering from 1
+
     df_winners.index = df_winners.index + 1
     df_winners.index.name = "No."
 
