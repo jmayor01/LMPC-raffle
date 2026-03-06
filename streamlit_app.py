@@ -2,44 +2,38 @@ import streamlit as st
 import pandas as pd
 import random
 import time
-from PIL import Image
 
 st.set_page_config(page_title="LMPC Raffle Draw", layout="wide")
 
 # ----------------------------
-# Load Logo
-# ----------------------------
-logo = Image.open("logo.jpg.jpg")
-
-# ----------------------------
-# Custom Theme (Based on Logo)
+# Styling
 # ----------------------------
 st.markdown("""
 <style>
 
 .stApp{
-background: linear-gradient(to bottom,#e6f4ff,#ffffff);
+background-color:#f5f7fb;
 }
 
 .title{
 text-align:center;
 font-size:55px;
 font-weight:bold;
-color:#d60000;
+color:#2c3e50;
 }
 
 .subtitle{
 text-align:center;
 font-size:28px;
-color:#ff7a00;
+color:#6c757d;
 }
 
 .roulette{
 text-align:center;
-font-size:65px;
+font-size:70px;
 font-weight:bold;
-background:#0f4c81;
-color:white;
+background:#111;
+color:#00ff88;
 padding:40px;
 border-radius:20px;
 margin-top:20px;
@@ -47,36 +41,31 @@ margin-top:20px;
 
 .winner{
 text-align:center;
-font-size:75px;
+font-size:80px;
 font-weight:bold;
-color:#ff7a00;
+color:#ff4b4b;
 padding:30px;
-}
-
-.name-list{
-height:400px;
-overflow-y:scroll;
-background:white;
-padding:15px;
-border-radius:10px;
-border:2px solid #0f4c81;
 }
 
 </style>
 """, unsafe_allow_html=True)
 
 # ----------------------------
-# Header Section
+# Header
 # ----------------------------
-col1,col2,col3 = st.columns([1,2,1])
-
-with col2:
-    st.image(logo,width=300)
-
 st.markdown('<div class="title">LODLOD MULTI-PURPOSE COOPERATIVE</div>', unsafe_allow_html=True)
-st.markdown('<div class="subtitle">🎉 RAFFLE DRAW SYSTEM 🎉</div>', unsafe_allow_html=True)
+st.markdown('<div class="subtitle">🎉 LIVE RAFFLE DRAW SYSTEM 🎉</div>', unsafe_allow_html=True)
 
 st.divider()
+
+# ----------------------------
+# Session State
+# ----------------------------
+if "participants" not in st.session_state:
+    st.session_state.participants = []
+
+if "winners" not in st.session_state:
+    st.session_state.winners = []
 
 # ----------------------------
 # Upload Excel
@@ -85,24 +74,15 @@ st.sidebar.header("Upload Participants")
 
 uploaded_file = st.sidebar.file_uploader("Upload Excel File", type=["xlsx"])
 
-if "participants" not in st.session_state:
-    st.session_state.participants = []
-
-if "winners" not in st.session_state:
-    st.session_state.winners = []
-
 if uploaded_file:
-
     df = pd.read_excel(uploaded_file, engine="openpyxl")
-
     names = df.iloc[:,0].dropna().astype(str).tolist()
-
     st.session_state.participants = names
 
 # ----------------------------
 # Dashboard
 # ----------------------------
-col1,col2 = st.columns(2)
+col1, col2, col3 = st.columns(3)
 
 with col1:
     st.metric("Total Participants", len(st.session_state.participants))
@@ -110,16 +90,18 @@ with col1:
 with col2:
     st.metric("Total Winners", len(st.session_state.winners))
 
+with col3:
+    remaining = len(st.session_state.participants) - len(st.session_state.winners)
+    st.metric("Remaining Eligible", remaining)
+
 # ----------------------------
-# Display Participant List
+# Participant List
 # ----------------------------
 st.subheader("Participant List")
 
 if st.session_state.participants:
-
-    name_df = pd.DataFrame(st.session_state.participants, columns=["Name"])
-
-    st.dataframe(name_df, height=400)
+    df_names = pd.DataFrame(st.session_state.participants, columns=["Name"])
+    st.dataframe(df_names, height=400)
 
 # ----------------------------
 # Prize Settings
@@ -129,19 +111,19 @@ st.sidebar.header("Prize Setup")
 prize = st.sidebar.text_input("Prize Name")
 
 winner_count = st.sidebar.number_input(
-"Number of Winners",
-min_value=1,
-value=1
+    "Number of Winners",
+    min_value=1,
+    value=1
 )
 
-draw_button = st.sidebar.button("🎡 START DRAW")
+start_draw = st.sidebar.button("🎡 START DRAW")
 
 roulette = st.empty()
 
 # ----------------------------
 # Draw Logic
 # ----------------------------
-if draw_button:
+if start_draw:
 
     available = st.session_state.participants.copy()
 
@@ -157,22 +139,22 @@ if draw_button:
 
         for i in range(winner_count):
 
+            # countdown
             for i in range(3,0,-1):
-
                 roulette.markdown(
-                f"<div class='roulette'>Drawing in {i}...</div>",
-                unsafe_allow_html=True
+                    f"<div class='roulette'>Drawing in {i}...</div>",
+                    unsafe_allow_html=True
                 )
-
                 time.sleep(1)
 
+            # roulette spin
             for _ in range(60):
 
                 name = random.choice(available)
 
                 roulette.markdown(
-                f"<div class='roulette'>{name}</div>",
-                unsafe_allow_html=True
+                    f"<div class='roulette'>{name}</div>",
+                    unsafe_allow_html=True
                 )
 
                 time.sleep(0.05)
@@ -180,22 +162,21 @@ if draw_button:
             winner = random.choice(available)
 
             roulette.markdown(
-            f"<div class='winner'>🏆 {winner} 🏆</div>",
-            unsafe_allow_html=True
+                f"<div class='winner'>🏆 {winner} 🏆</div>",
+                unsafe_allow_html=True
             )
 
             st.balloons()
 
             winners.append(winner)
-
             available.remove(winner)
 
             time.sleep(3)
 
         for w in winners:
             st.session_state.winners.append({
-                "Prize":prize,
-                "Name":w
+                "Prize": prize,
+                "Name": w
             })
 
 # ----------------------------
@@ -207,13 +188,16 @@ if st.session_state.winners:
 
     df_winners = pd.DataFrame(st.session_state.winners)
 
-    st.dataframe(df_winners,use_container_width=True)
+    st.dataframe(df_winners, use_container_width=True)
 
     csv = df_winners.to_csv(index=False).encode("utf-8")
 
     st.download_button(
-    "Download Winner Report",
-    csv,
-    "raffle_winners.csv",
-    "text/csv"
+        "Download Winner Report",
+        csv,
+        "raffle_winners.csv",
+        "text/csv"
     )
+
+else:
+    st.info("No winners yet.")
