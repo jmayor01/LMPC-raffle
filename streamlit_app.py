@@ -248,15 +248,7 @@ if start_draw:
 
         for i in range(winner_count):
 
-            # countdown
-            for c in range(3,0,-1):
-
-                draw_placeholder.markdown(
-                f'<div class="draw-box">Drawing in {c}...</div>',
-                unsafe_allow_html=True
-                )
-
-                time.sleep(1)
+        
 
 
             # play spin sound
@@ -277,7 +269,7 @@ if start_draw:
 
                 time.sleep(delay)
 
-                delay += 0.002
+                delay += 0.0015
 
 
             winner = random.choice(available)
