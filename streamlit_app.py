@@ -346,50 +346,99 @@ winner_placeholder = st.empty()
 # -------------------------
 # Draw logic
 # -------------------------
+draw_placeholder = st.empty()
+
 if start_draw:
-    if not st.session_state.participants:
-        st.error("Please upload the participant Excel file first.")
+
+    available = st.session_state.participants.copy()
+
+    previous = [w["Name"] for w in st.session_state.winners]
+    available = [p for p in available if p not in previous]
+
+    if len(available) < winner_count:
+        st.error("Not enough participants remaining.")
     else:
-        previous_winner_names = [w["Name"] for w in st.session_state.winners]
-        available = [p for p in st.session_state.participants if p not in previous_winner_names]
 
-        if len(available) < winner_count:
-            st.error("Not enough participants remaining for the requested number of winners.")
-        else:
-            drawn_winners = []
+        winners = []
 
-            for draw_no in range(winner_count):
-                winner = random.choice(available)
+        for i in range(winner_count):
 
-                with wheel_placeholder:
-                    components.html(
-                    spin_wheel_html(available, winner),
-                    height=700,
-                    scrolling=False
+            # countdown
+            for c in range(3,0,-1):
+
+                draw_placeholder.markdown(
+                f"""
+                <div style="
+                background:#111;
+                padding:60px;
+                border-radius:20px;
+                text-align:center;
+                font-size:60px;
+                color:#00ff88;">
+                Drawing in {c}...
+                </div>
+                """,
+                unsafe_allow_html=True
                 )
 
-                time.sleep(7)
+                time.sleep(1)
 
-                winner_placeholder.markdown(
-                    f"""
-                    <div class="winner-box">
-                        <div style="font-size:18px; color:#7f8c8d; font-weight:700;">
-                            WINNER FOR: {prize}
-                        </div>
-                        <div class="winner-name">🏆 {winner} 🏆</div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True
+            # rolling animation
+            delay = 0.02
+
+            for _ in range(120):
+
+                name = random.choice(available)
+
+                draw_placeholder.markdown(
+                f"""
+                <div style="
+                background:#111;
+                padding:60px;
+                border-radius:20px;
+                text-align:center;
+                font-size:55px;
+                color:#00ff88;">
+                {name}
+                </div>
+                """,
+                unsafe_allow_html=True
                 )
 
-                st.balloons()
-                drawn_winners.append(winner)
-                available.remove(winner)
+                time.sleep(delay)
 
-                st.session_state.winners.append({
-                    "Prize": prize,
-                    "Name": winner
-                })
+                delay += 0.002
+
+            winner = random.choice(available)
+
+            draw_placeholder.markdown(
+            f"""
+            <div style="
+            background:#111;
+            padding:70px;
+            border-radius:20px;
+            text-align:center;
+            font-size:85px;
+            font-weight:bold;
+            color:gold;">
+            🏆 {winner} 🏆
+            </div>
+            """,
+            unsafe_allow_html=True
+            )
+
+            st.balloons()
+
+            winners.append(winner)
+            available.remove(winner)
+
+            time.sleep(3)
+
+        for w in winners:
+            st.session_state.winners.append({
+                "Prize":prize,
+                "Name":w
+            })
 
 # -------------------------
 # Winner board
