@@ -17,6 +17,7 @@ def get_base64_image(image_path):
             return base64.b64encode(f.read()).decode()
     return ""
 
+
 def play_winner_sound(file_path):
     if os.path.exists(file_path):
         with open(file_path, "rb") as f:
@@ -27,20 +28,16 @@ def play_winner_sound(file_path):
 
         components.html(
             f"""
-            <html>
-              <body>
-                <audio id="winner_{audio_id}">
-                  <source src="data:audio/mp4;base64,{b64}" type="audio/mp4">
-                </audio>
-                <script>
-                  const audio = document.getElementById("winner_{audio_id}");
-                  audio.currentTime = 0;
-                  audio.play().catch(err => console.log(err));
-                </script>
-              </body>
-            </html>
+            <audio id="winner_{audio_id}">
+                <source src="data:audio/mp4;base64,{b64}" type="audio/mp4">
+            </audio>
+            <script>
+                const audio = document.getElementById("winner_{audio_id}");
+                audio.currentTime = 0;
+                audio.play().catch(() => {});
+            </script>
             """,
-            height=0,
+            height=0
         )
 
 
@@ -54,8 +51,7 @@ def load_names_from_excel(uploaded_file):
         .str.strip()
     )
 
-    names = names[names != ""].drop_duplicates().tolist()
-    return names
+    return names[names != ""].drop_duplicates().tolist()
 
 
 # -------------------------
@@ -93,16 +89,6 @@ text-align:center;
 font-size:30px;
 font-weight:800;
 color:#ff4b4b;
-margin-top:10px;
-}
-
-.draw-box{
-background:#111;
-padding:70px;
-border-radius:20px;
-text-align:center;
-font-size:60px;
-color:#00ff88;
 }
 
 .multi-winner-box{
@@ -122,9 +108,12 @@ margin-bottom:20px;
 
 .multi-winner-grid{
 display:grid;
-grid-template-columns: repeat(2, minmax(0, 1fr));
 gap:16px;
 }
+
+.cols-2{ grid-template-columns: repeat(2, 1fr); }
+.cols-3{ grid-template-columns: repeat(3, 1fr); }
+.cols-4{ grid-template-columns: repeat(4, 1fr); }
 
 .multi-winner-item{
 background:#1c1c1c;
@@ -185,28 +174,14 @@ st.divider()
 # -------------------------
 # Sidebar
 # -------------------------
-st.sidebar.header("Upload Participants")
 uploaded_file = st.sidebar.file_uploader("Upload Excel File", type=["xlsx"])
 
-if uploaded_file is not None:
-    try:
-        st.session_state.participants = load_names_from_excel(uploaded_file)
-        st.sidebar.success(f"{len(st.session_state.participants)} participants loaded")
-    except Exception as e:
-        st.sidebar.error(str(e))
-
-
-st.sidebar.header("Prize Setup")
+if uploaded_file:
+    st.session_state.participants = load_names_from_excel(uploaded_file)
 
 prize = st.sidebar.text_input("Prize Name", value="Special Prize")
-
-winner_count = st.sidebar.number_input(
-    "Number of Winners",
-    min_value=1,
-    value=1
-)
-
-start_draw = st.sidebar.button("🎡 START RAFFLE DRAW", use_container_width=True)
+winner_count = st.sidebar.number_input("Number of Winners", min_value=1, value=1)
+start_draw = st.sidebar.button("🎡 START DRAW")
 
 
 # -------------------------
@@ -229,62 +204,34 @@ with col3:
 # -------------------------
 # Participant List
 # -------------------------
-show_list = st.toggle("Show Participant List", value=True)
+if st.toggle("Show Participant List", True):
+    df = pd.DataFrame(st.session_state.participants, columns=["Name"])
+    df.index += 1
+    df.index.name = "No."
+    st.dataframe(df, use_container_width=True)
 
-if show_list:
-
-    st.subheader("Participant List")
-
-    if st.session_state.participants:
-
-        df_names = pd.DataFrame(
-            st.session_state.participants,
-            columns=["Name"]
-        )
-
-        df_names.index = df_names.index + 1
-        df_names.index.name = "No."
-
-        st.dataframe(df_names, height=300, use_container_width=True)
-
-    else:
-        st.info("Upload an Excel file to display participants")
 
 # -------------------------
-# Remaining Eligible Participants
+# Remaining Eligible List
 # -------------------------
 st.subheader("Remaining Eligible Participants")
 
-if st.session_state.participants:
+previous = [w["Name"] for w in st.session_state.winners]
+remaining_list = [p for p in st.session_state.participants if p not in previous]
 
-    previous = [w["Name"] for w in st.session_state.winners]
-
-    remaining_list = [
-        p for p in st.session_state.participants
-        if p not in previous
-    ]
-
-    if remaining_list:
-
-        df_remaining = pd.DataFrame(remaining_list, columns=["Name"])
-
-        # start numbering at 1
-        df_remaining.index = df_remaining.index + 1
-        df_remaining.index.name = "No."
-
-        st.dataframe(df_remaining, height=300, use_container_width=True)
-
-    else:
-        st.success("All participants have already won.")
-
+if remaining_list:
+    df_rem = pd.DataFrame(remaining_list, columns=["Name"])
+    df_rem.index += 1
+    df_rem.index.name = "No."
+    st.dataframe(df_rem, use_container_width=True)
 else:
-    st.info("Upload participants first.")
-    
+    st.success("All participants have already won.")
+
+
 # -------------------------
 # Draw Area
 # -------------------------
 st.markdown('<div class="draw-title">🎯 DRAW AREA</div>', unsafe_allow_html=True)
-
 draw_placeholder = st.empty()
 
 
@@ -293,81 +240,61 @@ draw_placeholder = st.empty()
 # -------------------------
 if start_draw:
 
-    available = st.session_state.participants.copy()
-
-    previous = [w["Name"] for w in st.session_state.winners]
-
-    available = [p for p in available if p not in previous]
+    available = [p for p in st.session_state.participants if p not in previous]
 
     if len(available) < winner_count:
-
-        st.error("Not enough participants remaining.")
-
+        st.error("Not enough participants.")
     else:
 
         selected_winners = random.sample(available, winner_count)
 
-        # rolling animation
-        delay = 0.015
-
-        for _ in range(70):
-
-            preview_names = random.sample(
-                available,
-                min(winner_count, len(available))
-            )
-
-            preview_html = "".join(
-                [f'<div class="multi-winner-item">{name}</div>' for name in preview_names]
-            )
-
-            draw_placeholder.markdown(
-                f"""
-                <div class="multi-winner-box">
-                    <div class="multi-winner-title">
-                    Drawing {winner_count} Winner(s)...
-                    </div>
-                    <div class="multi-winner-grid">
-                    {preview_html}
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-            time.sleep(delay)
-            delay += 0.0015
-
-
-        # -------------------------
-        # Final Winner Display
-        # -------------------------
-        if winner_count == 1:
-
-            winner_name = selected_winners[0]
-
-            draw_placeholder.markdown(
-                f"""
-                <div class="winner-box">
-                🏆 {winner_name} 🏆
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
+        # determine columns
+        if winner_count <= 6:
+            grid_class = "cols-2"
+        elif winner_count <= 12:
+            grid_class = "cols-3"
         else:
+            grid_class = "cols-4"
 
-            final_html = "".join(
-                [f'<div class="multi-winner-item">🏆 {name}</div>' for name in selected_winners]
+        # animation
+        for _ in range(60):
+
+            preview = random.sample(available, min(winner_count, len(available)))
+
+            html = "".join(
+                [f'<div class="multi-winner-item">{n}</div>' for n in preview]
             )
 
             draw_placeholder.markdown(
                 f"""
                 <div class="multi-winner-box">
-                    <div class="multi-winner-title">
-                    WINNERS FOR: {prize}
+                    <div class="multi-winner-title">Drawing...</div>
+                    <div class="multi-winner-grid {grid_class}">
+                    {html}
                     </div>
-                    <div class="multi-winner-grid">
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+            time.sleep(0.03)
+
+        # final display
+        if winner_count == 1:
+            draw_placeholder.markdown(
+                f'<div class="winner-box">🏆 {selected_winners[0]} 🏆</div>',
+                unsafe_allow_html=True
+            )
+        else:
+            final_html = "".join(
+                [f'<div class="multi-winner-item">🏆 {n}</div>' for n in selected_winners]
+            )
+
+            draw_placeholder.markdown(
+                f"""
+                <div class="multi-winner-box">
+                    <div class="multi-winner-title">WINNERS</div>
+                    <div class="multi-winner-grid {grid_class}">
                     {final_html}
                     </div>
                 </div>
@@ -375,18 +302,11 @@ if start_draw:
                 unsafe_allow_html=True
             )
 
-        # play winner sound
         play_winner_sound("winner.m4a")
-
         st.balloons()
 
-        for winner in selected_winners:
-            st.session_state.winners.append({
-                "Prize": prize,
-                "Name": winner
-            })
-
-        time.sleep(2)
+        for w in selected_winners:
+            st.session_state.winners.append({"Prize": prize, "Name": w})
 
 
 # -------------------------
@@ -395,23 +315,15 @@ if start_draw:
 st.header("🏆 Winner Board")
 
 if st.session_state.winners:
-
-    df_winners = pd.DataFrame(st.session_state.winners)
-
-    df_winners.index = df_winners.index + 1
-    df_winners.index.name = "No."
-
-    st.dataframe(df_winners, use_container_width=True)
-
-    csv = df_winners.to_csv(index=False).encode("utf-8")
+    df = pd.DataFrame(st.session_state.winners)
+    df.index += 1
+    df.index.name = "No."
+    st.dataframe(df, use_container_width=True)
 
     st.download_button(
-        "Download Winner Report",
-        csv,
-        "raffle_winners.csv",
-        "text/csv",
-        use_container_width=True
+        "Download CSV",
+        df.to_csv(index=False),
+        "winners.csv"
     )
-
 else:
     st.info("No winners yet.")
