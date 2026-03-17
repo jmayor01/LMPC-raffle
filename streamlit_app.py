@@ -202,8 +202,8 @@ st.markdown("""
 }
 
 .floating-draw-wrap{
-    margin-top: 0.75rem;
-    margin-bottom: 1rem;
+    margin-top:0.75rem;
+    margin-bottom:1rem;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -287,20 +287,16 @@ participants_metric = col1.empty()
 winners_metric = col2.empty()
 remaining_metric = col3.empty()
 
-
-def update_metrics():
+def update_metrics() -> None:
     remaining = get_remaining_participants()
-
     participants_metric.metric("Participants", len(st.session_state.participants))
     winners_metric.metric("Winners", len(st.session_state.winners))
     remaining_metric.metric("Remaining Eligible", len(remaining))
 
-
-# initial render
 update_metrics()
 
 # -------------------------
-# Non-event mode tables
+# Placeholders
 # -------------------------
 participant_placeholder = None
 remaining_placeholder = None
@@ -321,7 +317,6 @@ def render_participant_list() -> None:
         else:
             st.info("Upload an Excel file to display participants")
 
-
 def render_remaining_list() -> None:
     if remaining_placeholder is None:
         return
@@ -341,7 +336,6 @@ def render_remaining_list() -> None:
                 st.success("All participants have already won.")
         else:
             st.info("Upload participants first.")
-
 
 def render_winner_board() -> None:
     if winner_board_placeholder is None:
@@ -367,6 +361,9 @@ def render_winner_board() -> None:
         else:
             st.info("No winners yet.")
 
+# -------------------------
+# Non-event mode tables
+# -------------------------
 if not event_mode:
     show_list = st.toggle("Show Participant List", value=True)
 
@@ -383,7 +380,6 @@ if not event_mode:
 st.markdown('<div class="draw-title">🎯 DRAW AREA</div>', unsafe_allow_html=True)
 draw_placeholder = st.empty()
 
-# Fullscreen button lives in the main page
 if event_mode:
     st.markdown('<div class="floating-draw-wrap">', unsafe_allow_html=True)
     start_draw = st.button("🎡 DRAW NOW", use_container_width=True)
@@ -405,7 +401,6 @@ if start_draw:
         selected_winners = random.sample(available, winner_count)
         grid_class = get_grid_class(winner_count)
 
-        # rolling animation
         delay = 0.015
         for _ in range(70):
             preview_names = random.sample(available, min(winner_count, len(available)))
@@ -441,7 +436,6 @@ if start_draw:
             time.sleep(delay)
             delay += 0.0015
 
-        # final winner display
         if winner_count == 1:
             winner_name = selected_winners[0]
             draw_placeholder.markdown(
@@ -474,25 +468,22 @@ if start_draw:
         play_winner_sound("winner.m4a")
         st.balloons()
 
-        # add winners one by one and update remaining list live
+        # add winners one by one and update UI live
         for winner in selected_winners:
+            st.session_state.winners.append({
+                "Prize": prize,
+                "Name": winner
+            })
 
-    st.session_state.winners.append({
-        "Prize": prize,
-        "Name": winner
-    })
-
-    # 🔥 update metrics in real-time
-    update_metrics()
-
-    # update remaining list
-    if not event_mode and remaining_placeholder is not None:
-        render_remaining_list()
+            update_metrics()
 
             if not event_mode and remaining_placeholder is not None:
                 render_remaining_list()
 
-        time.sleep(1)
+            if not event_mode and winner_board_placeholder is not None:
+                render_winner_board()
+
+            time.sleep(0.3)
 
 # -------------------------
 # Winner Board
