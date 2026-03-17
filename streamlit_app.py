@@ -250,7 +250,36 @@ if show_list:
     else:
         st.info("Upload an Excel file to display participants")
 
+# -------------------------
+# Remaining Eligible Participants
+# -------------------------
+st.subheader("Remaining Eligible Participants")
 
+if st.session_state.participants:
+
+    previous = [w["Name"] for w in st.session_state.winners]
+
+    remaining_list = [
+        p for p in st.session_state.participants
+        if p not in previous
+    ]
+
+    if remaining_list:
+
+        df_remaining = pd.DataFrame(remaining_list, columns=["Name"])
+
+        # start numbering at 1
+        df_remaining.index = df_remaining.index + 1
+        df_remaining.index.name = "No."
+
+        st.dataframe(df_remaining, height=300, use_container_width=True)
+
+    else:
+        st.success("All participants have already won.")
+
+else:
+    st.info("Upload participants first.")
+    
 # -------------------------
 # Draw Area
 # -------------------------
