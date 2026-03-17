@@ -102,7 +102,17 @@ if uploaded_file is not None:
 st.sidebar.header("Prize Setup")
 prize = st.sidebar.text_input("Prize Name", value="Special Prize")
 winner_count = st.sidebar.number_input("Number of Winners", min_value=1, value=1, step=1)
-event_mode = st.sidebar.toggle("🎬 Fullscreen Event Mode", value=False)
+if "event_mode" not in st.session_state:
+    st.session_state.event_mode = False
+
+# only show toggle if sidebar is visible
+if not st.session_state.event_mode:
+    st.session_state.event_mode = st.sidebar.toggle(
+        "🎬 Fullscreen Event Mode",
+        value=st.session_state.event_mode
+    )
+
+event_mode = st.session_state.event_mode
 
 # -------------------------
 # Styling
@@ -381,9 +391,16 @@ st.markdown('<div class="draw-title">🎯 DRAW AREA</div>', unsafe_allow_html=Tr
 draw_placeholder = st.empty()
 
 if event_mode:
-    st.markdown('<div class="floating-draw-wrap">', unsafe_allow_html=True)
-    start_draw = st.button("🎡 DRAW NOW", use_container_width=True)
-    st.markdown('</div>', unsafe_allow_html=True)
+
+    colA, colB = st.columns([8,1])
+
+    with colA:
+        start_draw = st.button("🎡 DRAW NOW", use_container_width=True)
+
+    with colB:
+        if st.button("❌ EXIT"):
+            st.session_state.event_mode = False
+            st.rerun()
 else:
     start_draw = st.sidebar.button("🎡 START RAFFLE DRAW", use_container_width=True)
 
