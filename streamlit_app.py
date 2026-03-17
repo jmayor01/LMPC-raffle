@@ -15,14 +15,14 @@ st.set_page_config(
 # -------------------------
 # Helpers
 # -------------------------
-def get_base64_image(image_path):
+def get_base64_image(image_path: str) -> str:
     if os.path.exists(image_path):
         with open(image_path, "rb") as f:
             return base64.b64encode(f.read()).decode()
     return ""
 
 
-def play_winner_sound(file_path):
+def play_winner_sound(file_path: str) -> None:
     if os.path.exists(file_path):
         with open(file_path, "rb") as f:
             data = f.read()
@@ -49,7 +49,7 @@ def play_winner_sound(file_path):
         )
 
 
-def load_names_from_excel(uploaded_file):
+def load_names_from_excel(uploaded_file) -> list[str]:
     df = pd.read_excel(uploaded_file, engine="openpyxl")
 
     names = (
@@ -63,9 +63,17 @@ def load_names_from_excel(uploaded_file):
     return names
 
 
-def get_remaining_participants():
+def get_remaining_participants() -> list[str]:
     previous_winners = [w["Name"] for w in st.session_state.winners]
     return [p for p in st.session_state.participants if p not in previous_winners]
+
+
+def get_grid_class(winner_count: int) -> str:
+    if winner_count <= 6:
+        return "cols-2"
+    if winner_count <= 12:
+        return "cols-3"
+    return "cols-4"
 
 
 # -------------------------
@@ -95,8 +103,6 @@ st.sidebar.header("Prize Setup")
 prize = st.sidebar.text_input("Prize Name", value="Special Prize")
 winner_count = st.sidebar.number_input("Number of Winners", min_value=1, value=1, step=1)
 event_mode = st.sidebar.toggle("🎬 Fullscreen Event Mode", value=False)
-start_draw = st.sidebar.button("🎡 START RAFFLE DRAW", use_container_width=True)
-
 
 # -------------------------
 # Styling
@@ -125,6 +131,11 @@ st.markdown("""
     color:#ff4b4b;
     margin-top:10px;
     margin-bottom:16px;
+}
+
+.logo-wrap{
+    text-align:center;
+    margin-bottom:6px;
 }
 
 .multi-winner-box{
@@ -190,9 +201,9 @@ st.markdown("""
     font-size:14px;
 }
 
-.logo-wrap{
-    text-align:center;
-    margin-bottom:6px;
+.floating-draw-wrap{
+    margin-top: 0.75rem;
+    margin-bottom: 1rem;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -244,7 +255,6 @@ if event_mode:
     </style>
     """, unsafe_allow_html=True)
 
-
 # -------------------------
 # Logo
 # -------------------------
@@ -259,7 +269,6 @@ if logo_b64:
         unsafe_allow_html=True
     )
 
-
 # -------------------------
 # Header
 # -------------------------
@@ -269,31 +278,31 @@ st.markdown('<div class="small-note">Transparent live raffle draw</div>', unsafe
 
 st.divider()
 
-
 # -------------------------
 # Metrics
 # -------------------------
 remaining_list = get_remaining_participants()
 
 col1, col2, col3 = st.columns(3)
-
 with col1:
     st.metric("Participants", len(st.session_state.participants))
-
 with col2:
     st.metric("Winners", len(st.session_state.winners))
-
 with col3:
     st.metric("Remaining Eligible", len(remaining_list))
 
-
 # -------------------------
-# Participant / Remaining Lists
+# Non-event mode tables
 # -------------------------
-if not event_mode:
-    show_list = st.toggle("Show Participant List", value=True)
+participant_placeholder = None
+remaining_placeholder = None
+winner_board_placeholder = None
 
-    if show_list:
+def render_participant_list() -> None:
+    if participant_placeholder is None:
+        return
+
+    with participant_placeholder.container():
         st.subheader("Participant List")
 
         if st.session_state.participants:
@@ -304,19 +313,61 @@ if not event_mode:
         else:
             st.info("Upload an Excel file to display participants")
 
-    st.subheader("Remaining Eligible Participants")
 
-    if st.session_state.participants:
-        if remaining_list:
-            df_remaining = pd.DataFrame(remaining_list, columns=["Name"])
-            df_remaining.index = df_remaining.index + 1
-            df_remaining.index.name = "No."
-            st.dataframe(df_remaining, height=300, use_container_width=True)
+def render_remaining_list() -> None:
+    if remaining_placeholder is None:
+        return
+
+    with remaining_placeholder.container():
+        st.subheader("Remaining Eligible Participants")
+
+        if st.session_state.participants:
+            current_remaining = get_remaining_participants()
+
+            if current_remaining:
+                df_remaining = pd.DataFrame(current_remaining, columns=["Name"])
+                df_remaining.index = df_remaining.index + 1
+                df_remaining.index.name = "No."
+                st.dataframe(df_remaining, height=300, use_container_width=True)
+            else:
+                st.success("All participants have already won.")
         else:
-            st.success("All participants have already won.")
-    else:
-        st.info("Upload participants first.")
+            st.info("Upload participants first.")
 
+
+def render_winner_board() -> None:
+    if winner_board_placeholder is None:
+        return
+
+    with winner_board_placeholder.container():
+        st.header("🏆 Winner Board")
+
+        if st.session_state.winners:
+            df_winners = pd.DataFrame(st.session_state.winners)
+            df_winners.index = df_winners.index + 1
+            df_winners.index.name = "No."
+            st.dataframe(df_winners, use_container_width=True)
+
+            csv_data = df_winners.to_csv(index=False).encode("utf-8")
+            st.download_button(
+                "Download Winner Report",
+                csv_data,
+                "raffle_winners.csv",
+                "text/csv",
+                use_container_width=True
+            )
+        else:
+            st.info("No winners yet.")
+
+if not event_mode:
+    show_list = st.toggle("Show Participant List", value=True)
+
+    if show_list:
+        participant_placeholder = st.empty()
+        render_participant_list()
+
+    remaining_placeholder = st.empty()
+    render_remaining_list()
 
 # -------------------------
 # Draw Area
@@ -324,6 +375,13 @@ if not event_mode:
 st.markdown('<div class="draw-title">🎯 DRAW AREA</div>', unsafe_allow_html=True)
 draw_placeholder = st.empty()
 
+# Fullscreen button lives in the main page
+if event_mode:
+    st.markdown('<div class="floating-draw-wrap">', unsafe_allow_html=True)
+    start_draw = st.button("🎡 DRAW NOW", use_container_width=True)
+    st.markdown('</div>', unsafe_allow_html=True)
+else:
+    start_draw = st.sidebar.button("🎡 START RAFFLE DRAW", use_container_width=True)
 
 # -------------------------
 # Draw Logic
@@ -331,38 +389,33 @@ draw_placeholder = st.empty()
 if start_draw:
     available = get_remaining_participants()
 
-    if len(available) < winner_count:
-        st.error("Not enough participants remaining.")
-    elif not available:
+    if not available:
         st.error("No eligible participants available.")
+    elif len(available) < winner_count:
+        st.error("Not enough participants remaining.")
     else:
         selected_winners = random.sample(available, winner_count)
-
-        # determine column layout
-        if winner_count <= 6:
-            grid_class = "cols-2"
-        elif winner_count <= 12:
-            grid_class = "cols-3"
-        else:
-            grid_class = "cols-4"
+        grid_class = get_grid_class(winner_count)
 
         # rolling animation
         delay = 0.015
         for _ in range(70):
             preview_names = random.sample(available, min(winner_count, len(available)))
-            preview_html = "".join(
-                [f'<div class="multi-winner-item">{name}</div>' for name in preview_names]
-            )
 
-            # centered layout if only 1 winner
             if winner_count == 1:
-                preview_block = f"""
-                <div class="winner-box">
-                    {preview_names[0]}
-                </div>
-                """
-                draw_placeholder.markdown(preview_block, unsafe_allow_html=True)
+                draw_placeholder.markdown(
+                    f"""
+                    <div class="winner-box">
+                        {preview_names[0]}
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
             else:
+                preview_html = "".join(
+                    [f'<div class="multi-winner-item">{name}</div>' for name in preview_names]
+                )
+
                 draw_placeholder.markdown(
                     f"""
                     <div class="multi-winner-box">
@@ -413,35 +466,21 @@ if start_draw:
         play_winner_sound("winner.m4a")
         st.balloons()
 
+        # add winners one by one and update remaining list live
         for winner in selected_winners:
             st.session_state.winners.append({
                 "Prize": prize,
                 "Name": winner
             })
 
-        time.sleep(2)
+            if not event_mode and remaining_placeholder is not None:
+                render_remaining_list()
 
+        time.sleep(1)
 
 # -------------------------
 # Winner Board
 # -------------------------
 if not event_mode:
-    st.header("🏆 Winner Board")
-
-    if st.session_state.winners:
-        df_winners = pd.DataFrame(st.session_state.winners)
-        df_winners.index = df_winners.index + 1
-        df_winners.index.name = "No."
-        st.dataframe(df_winners, use_container_width=True)
-
-        csv = df_winners.to_csv(index=False).encode("utf-8")
-
-        st.download_button(
-            "Download Winner Report",
-            csv,
-            "raffle_winners.csv",
-            "text/csv",
-            use_container_width=True
-        )
-    else:
-        st.info("No winners yet.")
+    winner_board_placeholder = st.empty()
+    render_winner_board()
