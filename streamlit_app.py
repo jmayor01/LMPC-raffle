@@ -281,15 +281,23 @@ st.divider()
 # -------------------------
 # Metrics
 # -------------------------
-remaining_list = get_remaining_participants()
-
 col1, col2, col3 = st.columns(3)
-with col1:
-    st.metric("Participants", len(st.session_state.participants))
-with col2:
-    st.metric("Winners", len(st.session_state.winners))
-with col3:
-    st.metric("Remaining Eligible", len(remaining_list))
+
+participants_metric = col1.empty()
+winners_metric = col2.empty()
+remaining_metric = col3.empty()
+
+
+def update_metrics():
+    remaining = get_remaining_participants()
+
+    participants_metric.metric("Participants", len(st.session_state.participants))
+    winners_metric.metric("Winners", len(st.session_state.winners))
+    remaining_metric.metric("Remaining Eligible", len(remaining))
+
+
+# initial render
+update_metrics()
 
 # -------------------------
 # Non-event mode tables
@@ -468,10 +476,18 @@ if start_draw:
 
         # add winners one by one and update remaining list live
         for winner in selected_winners:
-            st.session_state.winners.append({
-                "Prize": prize,
-                "Name": winner
-            })
+
+    st.session_state.winners.append({
+        "Prize": prize,
+        "Name": winner
+    })
+
+    # 🔥 update metrics in real-time
+    update_metrics()
+
+    # update remaining list
+    if not event_mode and remaining_placeholder is not None:
+        render_remaining_list()
 
             if not event_mode and remaining_placeholder is not None:
                 render_remaining_list()
