@@ -247,7 +247,7 @@ if start:
                 html = "".join([f'<div class="multi-winner-item">{n}</div>' for n in sample])
                 draw.markdown(f'<div class="multi-winner-box"><div class="multi-winner-grid {cls}">{html}</div></div>', unsafe_allow_html=True)
 
-            time.sleep(0.01)
+            time.sleep(0.015)
 
         # final display
         if len(winners) == 1:
