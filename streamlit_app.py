@@ -6,235 +6,105 @@ import os
 import base64
 import streamlit.components.v1 as components
 
-# -------------------------
-# Page Config
-# -------------------------
-st.set_page_config(
-    page_title="LMPC Raffle",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+st.set_page_config(page_title="LMPC Raffle", layout="wide")
 
 # -------------------------
-# Constants
+# Session Defaults
 # -------------------------
-ADMIN_PASSWORD = "lmpcadmin"  # change this before actual event
-LOGO_FILE = "logo.png"
-WINNER_SOUND_FILE = "winner.m4a"
+if "participants" not in st.session_state:
+    st.session_state.participants = []
 
-# -------------------------
-# Session State Defaults
-# -------------------------
-DEFAULTS = {
-    "participants": [],
-    "winners": [],
-    "host_mode": False,
-    "admin_authenticated": True,
-    "prize": "Special Prize",
-    "winner_count": 1,
-    "show_participant_list": True,
-}
+if "winners" not in st.session_state:
+    st.session_state.winners = []
 
-for key, value in DEFAULTS.items():
-    if key not in st.session_state:
-        st.session_state[key] = value
+if "host_mode" not in st.session_state:
+    st.session_state.host_mode = False
+
+if "prize" not in st.session_state:
+    st.session_state.prize = "Special Prize"
+
+if "winner_count" not in st.session_state:
+    st.session_state.winner_count = 1
 
 # -------------------------
 # Helpers
 # -------------------------
-def get_base64_image(image_path: str) -> str:
-    if os.path.exists(image_path):
-        with open(image_path, "rb") as f:
-            return base64.b64encode(f.read()).decode()
+def get_base64_image(path):
+    if os.path.exists(path):
+        return base64.b64encode(open(path, "rb").read()).decode()
     return ""
 
-
-def play_winner_sound(file_path: str) -> None:
-    if not os.path.exists(file_path):
+def play_winner_sound(path):
+    if not os.path.exists(path):
         return
 
-    with open(file_path, "rb") as f:
-        data = f.read()
+    b64 = base64.b64encode(open(path, "rb").read()).decode()
+    uid = str(time.time()).replace(".", "")
 
-    b64 = base64.b64encode(data).decode()
-    audio_id = str(time.time()).replace(".", "")
+    components.html(f"""
+    <audio id="a{uid}">
+        <source src="data:audio/mp4;base64,{b64}" type="audio/mp4">
+    </audio>
+    <script>
+    var a = document.getElementById("a{uid}");
+    a.currentTime = 0;
+    a.play().catch(()=>null);
+    </script>
+    """, height=0)
 
-    components.html(
-        f"""
-        <html>
-          <body style="margin:0;padding:0;">
-            <audio id="winner_{audio_id}">
-              <source src="data:audio/mp4;base64,{b64}" type="audio/mp4">
-            </audio>
-            <script>
-              const audio = document.getElementById("winner_{audio_id}");
-              audio.currentTime = 0;
-              audio.play().catch(() => null);
-            </script>
-          </body>
-        </html>
-        """,
-        height=0,
-    )
-
-
-def load_names_from_excel(uploaded_file) -> list[str]:
-    df = pd.read_excel(uploaded_file, engine="openpyxl")
-
-    names = (
-        df.iloc[:, 0]
+def load_names(file):
+    df = pd.read_excel(file, engine="openpyxl")
+    return (
+        df.iloc[:,0]
         .dropna()
         .astype(str)
         .str.strip()
+        .drop_duplicates()
+        .tolist()
     )
 
-    names = names[names != ""].drop_duplicates().tolist()
-    return names
+def remaining():
+    won = [w["Name"] for w in st.session_state.winners]
+    return [p for p in st.session_state.participants if p not in won]
 
-
-def get_remaining_participants() -> list[str]:
-    previous_winners = [w["Name"] for w in st.session_state.winners]
-    return [p for p in st.session_state.participants if p not in previous_winners]
-
-
-def get_grid_class(winner_count: int) -> str:
-    if winner_count <= 6:
-        return "cols-2"
-    if winner_count <= 12:
-        return "cols-3"
+def grid(n):
+    if n <= 6: return "cols-2"
+    if n <= 12: return "cols-3"
     return "cols-4"
 
-
-def update_metrics() -> None:
-    remaining = get_remaining_participants()
-    participants_metric.metric("Participants", len(st.session_state.participants))
-    winners_metric.metric("Winners", len(st.session_state.winners))
-    remaining_metric.metric("Remaining Eligible", len(remaining))
-
-
-def render_participant_list(placeholder) -> None:
-    if placeholder is None:
-        return
-
-    with placeholder.container():
-        st.subheader("Participant List")
-
-        if st.session_state.participants:
-            df_names = pd.DataFrame(st.session_state.participants, columns=["Name"])
-            df_names.index = df_names.index + 1
-            df_names.index.name = "No."
-            st.dataframe(df_names, height=300, use_container_width=True)
-        else:
-            st.info("Upload an Excel file to display participants.")
-
-
-def render_remaining_list(placeholder) -> None:
-    if placeholder is None:
-        return
-
-    with placeholder.container():
-        st.subheader("Remaining Eligible Participants")
-
-        if st.session_state.participants:
-            current_remaining = get_remaining_participants()
-
-            if current_remaining:
-                df_remaining = pd.DataFrame(current_remaining, columns=["Name"])
-                df_remaining.index = df_remaining.index + 1
-                df_remaining.index.name = "No."
-                st.dataframe(df_remaining, height=300, use_container_width=True)
-            else:
-                st.success("All participants have already won.")
-        else:
-            st.info("Upload participants first.")
-
-
-def render_winner_board(placeholder) -> None:
-    if placeholder is None:
-        return
-
-    with placeholder.container():
-        st.header("🏆 Winner Board")
-
-        if st.session_state.winners:
-            df_winners = pd.DataFrame(st.session_state.winners)
-            df_winners.index = df_winners.index + 1
-            df_winners.index.name = "No."
-            st.dataframe(df_winners, use_container_width=True)
-
-            csv_data = df_winners.to_csv(index=False).encode("utf-8")
-            st.download_button(
-                "Download Winner Report",
-                csv_data,
-                "raffle_winners.csv",
-                "text/csv",
-                use_container_width=True
-            )
-        else:
-            st.info("No winners yet.")
-
-
-def enter_host_mode() -> None:
-    st.session_state.host_mode = True
-    st.session_state.admin_authenticated = False
-
-
-def exit_host_mode() -> None:
-    st.session_state.host_mode = False
-    st.session_state.admin_authenticated = True
-
-
 # -------------------------
-# Sidebar / Admin Panel
+# Sidebar (ADMIN MODE)
 # -------------------------
 if not st.session_state.host_mode:
+
     st.sidebar.header("⚙️ Admin Panel")
 
-    uploaded_file = st.sidebar.file_uploader("Upload Excel File", type=["xlsx"])
-    if uploaded_file is not None:
-        try:
-            st.session_state.participants = load_names_from_excel(uploaded_file)
-            st.sidebar.success(f"{len(st.session_state.participants)} participants loaded")
-        except Exception as e:
-            st.sidebar.error(f"Failed to load participants: {e}")
+    file = st.sidebar.file_uploader("Upload Excel", type=["xlsx"])
 
-    st.session_state.prize = st.sidebar.text_input("Prize Name", value=st.session_state.prize)
+    if file:
+        st.session_state.participants = load_names(file)
+        st.sidebar.success(f"{len(st.session_state.participants)} loaded")
+
+    st.session_state.prize = st.sidebar.text_input("Prize", st.session_state.prize)
+
     st.session_state.winner_count = st.sidebar.number_input(
-        "Number of Winners",
+        "Winners",
         min_value=1,
-        value=int(st.session_state.winner_count),
-        step=1
+        value=int(st.session_state.winner_count)
     )
 
-    st.session_state.show_participant_list = st.sidebar.toggle(
-        "Show Participant List",
-        value=st.session_state.show_participant_list
-    )
+    if st.sidebar.button("🎤 ENTER HOST MODE"):
+        st.session_state.host_mode = True
+        st.rerun()
 
-    col_admin_1, col_admin_2 = st.sidebar.columns(2)
-
-    with col_admin_1:
-        if st.button("🎤 Enter Host Mode", use_container_width=True):
-            enter_host_mode()
-            st.rerun()
-
-    with col_admin_2:
-        if st.button("🗑 Reset Winners", use_container_width=True):
-            st.session_state.winners = []
-            st.rerun()
-
-    if st.sidebar.button("🧹 Clear Participants", use_container_width=True):
-        st.session_state.participants = []
+    if st.sidebar.button("🗑 RESET WINNERS"):
         st.session_state.winners = []
         st.rerun()
 
 else:
-    # Hide sidebar in host mode
     st.markdown("""
     <style>
-    section[data-testid="stSidebar"] {
-        display: none !important;
-    }
+    section[data-testid="stSidebar"] {display:none;}
     </style>
     """, unsafe_allow_html=True)
 
@@ -243,402 +113,182 @@ else:
 # -------------------------
 st.markdown("""
 <style>
-.main-title{
-    text-align:center;
-    font-size:42px;
-    font-weight:800;
-    color:#2c3e50;
-    margin-bottom:0.2rem;
-}
+.main-title{text-align:center;font-size:42px;font-weight:800;color:#2c3e50;}
+.sub-title{text-align:center;font-size:22px;color:#6c757d;}
+.draw-title{text-align:center;font-size:30px;font-weight:800;color:#ff4b4b;}
 
-.sub-title{
-    text-align:center;
-    font-size:22px;
-    color:#6c757d;
-    margin-bottom:10px;
-}
-
-.draw-title{
-    text-align:center;
-    font-size:30px;
-    font-weight:800;
-    color:#ff4b4b;
-    margin-top:10px;
-    margin-bottom:16px;
-}
-
-.logo-wrap{
-    text-align:center;
-    margin-bottom:6px;
+.winner-box{
+background:#111;padding:80px;border-radius:20px;
+text-align:center;font-size:90px;color:gold;
 }
 
 .multi-winner-box{
-    background:#111;
-    padding:40px;
-    border-radius:20px;
-    color:white;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+background:#111;padding:40px;border-radius:20px;color:white;
 }
 
-.multi-winner-title{
-    text-align:center;
-    font-size:28px;
-    font-weight:800;
-    color:gold;
-    margin-bottom:20px;
-}
-
-.multi-winner-grid{
-    display:grid;
-    gap:16px;
-}
-
-.cols-2{
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.cols-3{
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.cols-4{
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-}
+.multi-winner-grid{display:grid;gap:16px;}
+.cols-2{grid-template-columns:repeat(2,1fr);}
+.cols-3{grid-template-columns:repeat(3,1fr);}
+.cols-4{grid-template-columns:repeat(4,1fr);}
 
 .multi-winner-item{
-    background:#1c1c1c;
-    border:2px solid gold;
-    border-radius:14px;
-    padding:16px;
-    text-align:center;
-    font-size:28px;
-    font-weight:bold;
-    color:gold;
-    word-wrap:break-word;
+background:#1c1c1c;border:2px solid gold;border-radius:14px;
+padding:16px;text-align:center;font-size:28px;color:gold;
 }
 
-.winner-box{
-    background:#111;
-    padding:80px;
-    border-radius:20px;
-    text-align:center;
-    font-size:90px;
-    font-weight:bold;
-    color:gold;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.18);
-    word-wrap:break-word;
-}
-
-.small-note{
-    text-align:center;
-    color:#6c757d;
-    font-size:14px;
-}
-
-.host-control-wrap{
-    margin-top:0.5rem;
-    margin-bottom:1rem;
-}
-
-.host-info-card{
-    background:#f8f9fa;
-    border:1px solid #dee2e6;
-    border-radius:16px;
-    padding:18px;
-    height:100%;
-}
-
-.host-info-title{
-    font-size:14px;
-    color:#6c757d;
-    margin-bottom:6px;
-}
-
-.host-info-value{
-    font-size:26px;
-    font-weight:800;
-    color:#2c3e50;
-    word-break:break-word;
-}
-
-.host-button button{
-    font-size:28px !important;
-    padding:18px 20px !important;
-    border-radius:14px !important;
-    font-weight:700 !important;
-}
-
-.admin-button button{
-    font-size:18px !important;
-    padding:14px 16px !important;
-    border-radius:12px !important;
-    font-weight:700 !important;
+.draw-button-wrap button {
+font-size:36px !important;
+padding:28px !important;
+border-radius:16px !important;
+font-weight:800 !important;
+background:linear-gradient(135deg,#ff4b4b,#ff7a18) !important;
+color:white !important;
+box-shadow:0 10px 25px rgba(0,0,0,0.25) !important;
 }
 </style>
 """, unsafe_allow_html=True)
 
-if st.session_state.host_mode:
-    st.markdown("""
-    <style>
-    .main .block-container {
-        padding-top: 0.75rem !important;
-        padding-bottom: 0.75rem !important;
-        max-width: 100% !important;
-    }
-
-    .main-title{
-        font-size:56px !important;
-    }
-
-    .sub-title{
-        font-size:28px !important;
-    }
-
-    .draw-title{
-        font-size:40px !important;
-        margin-top:0.5rem !important;
-        margin-bottom:1rem !important;
-    }
-
-    .winner-box{
-        font-size:130px !important;
-        padding:120px 60px !important;
-    }
-
-    .multi-winner-title{
-        font-size:42px !important;
-    }
-
-    .multi-winner-item{
-        font-size:42px !important;
-        padding:24px !important;
-    }
-
-    .multi-winner-box{
-        padding:48px !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-# -------------------------
-# Logo
-# -------------------------
-logo_b64 = get_base64_image(LOGO_FILE)
-if logo_b64:
-    st.markdown(
-        f"""
-        <div class="logo-wrap">
-            <img src="data:image/png;base64,{logo_b64}" width="150">
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
 # -------------------------
 # Header
 # -------------------------
+logo = get_base64_image("logo.png")
+if logo:
+    st.markdown(f'<div style="text-align:center"><img src="data:image/png;base64,{logo}" width="140"></div>', unsafe_allow_html=True)
+
 st.markdown('<div class="main-title">LODLOD MULTI-PURPOSE COOPERATIVE</div>', unsafe_allow_html=True)
 st.markdown('<div class="sub-title">🎉 LIVE RAFFLE DRAW SYSTEM 🎉</div>', unsafe_allow_html=True)
-st.markdown('<div class="small-note">Transparent live raffle draw</div>', unsafe_allow_html=True)
 
 st.divider()
 
 # -------------------------
 # Metrics
 # -------------------------
-col1, col2, col3 = st.columns(3)
-participants_metric = col1.empty()
-winners_metric = col2.empty()
-remaining_metric = col3.empty()
-update_metrics()
+c1,c2,c3 = st.columns(3)
+
+m1 = c1.empty()
+m2 = c2.empty()
+m3 = c3.empty()
+
+def refresh():
+    m1.metric("Participants", len(st.session_state.participants))
+    m2.metric("Winners", len(st.session_state.winners))
+    m3.metric("Remaining", len(remaining()))
+
+refresh()
 
 # -------------------------
-# Non-host mode tables
-# -------------------------
-participant_placeholder = None
-remaining_placeholder = None
-winner_board_placeholder = None
-
-if not st.session_state.host_mode:
-    if st.session_state.show_participant_list:
-        participant_placeholder = st.empty()
-        render_participant_list(participant_placeholder)
-
-    remaining_placeholder = st.empty()
-    render_remaining_list(remaining_placeholder)
-
-# -------------------------
-# Draw Area
+# DRAW AREA
 # -------------------------
 st.markdown('<div class="draw-title">🎯 DRAW AREA</div>', unsafe_allow_html=True)
-draw_placeholder = st.empty()
+draw = st.empty()
 
 # -------------------------
-# Host / Draw Controls
+# HOST MODE UI (UPGRADED)
 # -------------------------
 if st.session_state.host_mode:
-    left, mid, right = st.columns([5, 2, 2])
 
-    with left:
-        st.markdown('<div class="host-button">', unsafe_allow_html=True)
-        start_draw = st.button("🎡 DRAW NOW", use_container_width=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
 
-    with mid:
-        st.markdown(
-            f"""
-            <div class="host-info-card">
-                <div class="host-info-title">Prize</div>
-                <div class="host-info-value">{st.session_state.prize}</div>
-            </div>
-            """,
-            unsafe_allow_html=True
+    col1, col2 = st.columns([3,2])
+
+    with col1:
+        st.markdown("#### 🎁 Prize")
+        st.session_state.prize = st.text_input("", st.session_state.prize)
+
+    with col2:
+        st.markdown("#### 🏆 Number of Winners")
+        st.session_state.winner_count = st.number_input(
+            "",
+            min_value=1,
+            value=int(st.session_state.winner_count)
         )
 
-    with right:
-        st.markdown(
-            f"""
-            <div class="host-info-card">
-                <div class="host-info-title">Possible Winners</div>
-                <div class="host-info-value">{int(st.session_state.winner_count)}</div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+    st.markdown("<br>", unsafe_allow_html=True)
 
-    st.markdown('<div class="host-control-wrap"></div>', unsafe_allow_html=True)
+    left, center, right = st.columns([2,4,2])
 
-    admin_col_1, admin_col_2 = st.columns([8, 2])
-
-    with admin_col_2:
-        st.markdown('<div class="admin-button">', unsafe_allow_html=True)
-        if st.button("⚙️ Admin Access", use_container_width=True):
-            st.session_state.admin_authenticated = not st.session_state.admin_authenticated
+    with center:
+        st.markdown('<div class="draw-button-wrap">', unsafe_allow_html=True)
+        start = st.button("🎡 DRAW NOW", use_container_width=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-    if st.session_state.admin_authenticated:
-        with st.container():
-            st.markdown("### Admin Unlock")
-            password = st.text_input("Enter admin password", type="password", key="host_admin_password")
-            col_exit_1, col_exit_2 = st.columns([3, 2])
+    st.markdown("<br>", unsafe_allow_html=True)
 
-            with col_exit_1:
-                if st.button("❌ Exit Host Mode", use_container_width=True):
-                    if password == ADMIN_PASSWORD:
-                        exit_host_mode()
-                        st.rerun()
-                    else:
-                        st.error("Incorrect password.")
+    exit_l, exit_c, exit_r = st.columns([3,2,3])
 
-            with col_exit_2:
-                if st.button("🗑 Reset Winners", use_container_width=True):
-                    if password == ADMIN_PASSWORD:
-                        st.session_state.winners = []
-                        st.rerun()
-                    else:
-                        st.error("Incorrect password.")
+    with exit_c:
+        if st.button("⚙️ BACK TO ADMIN", use_container_width=True):
+            st.session_state.host_mode = False
+            st.rerun()
+
 else:
-    start_draw = st.sidebar.button("🎡 START RAFFLE DRAW", use_container_width=True)
+    start = st.sidebar.button("🎡 START DRAW")
 
 # -------------------------
-# Draw Logic
+# DRAW LOGIC
 # -------------------------
-if start_draw:
-    available = get_remaining_participants()
-    winner_count = int(st.session_state.winner_count)
-    prize = st.session_state.prize
+if start:
 
-    if not available:
-        st.error("No eligible participants available.")
-    elif len(available) < winner_count:
-        st.error("Not enough participants remaining.")
+    avail = remaining()
+
+    if len(avail) < st.session_state.winner_count:
+        st.error("Not enough participants")
     else:
-        selected_winners = random.sample(available, winner_count)
-        grid_class = get_grid_class(winner_count)
 
-        delay = 0.015
-        for _ in range(70):
-            preview_names = random.sample(available, min(winner_count, len(available)))
+        winners = random.sample(avail, st.session_state.winner_count)
+        cls = grid(len(winners))
 
-            if winner_count == 1:
-                draw_placeholder.markdown(
-                    f"""
-                    <div class="winner-box">
-                        {preview_names[0]}
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
+        for _ in range(60):
+            sample = random.sample(avail, min(len(winners), len(avail)))
+
+            if len(winners) == 1:
+                draw.markdown(f'<div class="winner-box">{sample[0]}</div>', unsafe_allow_html=True)
             else:
-                preview_html = "".join(
-                    [f'<div class="multi-winner-item">{name}</div>' for name in preview_names]
-                )
+                html = "".join([f'<div class="multi-winner-item">{n}</div>' for n in sample])
+                draw.markdown(f'<div class="multi-winner-box"><div class="multi-winner-grid {cls}">{html}</div></div>', unsafe_allow_html=True)
 
-                draw_placeholder.markdown(
-                    f"""
-                    <div class="multi-winner-box">
-                        <div class="multi-winner-title">
-                            Drawing {winner_count} Winner(s)...
-                        </div>
-                        <div class="multi-winner-grid {grid_class}">
-                            {preview_html}
-                        </div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
+            time.sleep(0.02)
 
-            time.sleep(delay)
-            delay += 0.0015
-
-        if winner_count == 1:
-            winner_name = selected_winners[0]
-            draw_placeholder.markdown(
-                f"""
-                <div class="winner-box">
-                    🏆 {winner_name} 🏆
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
+        if len(winners) == 1:
+            draw.markdown(f'<div class="winner-box">🏆 {winners[0]} 🏆</div>', unsafe_allow_html=True)
         else:
-            final_html = "".join(
-                [f'<div class="multi-winner-item">🏆 {name}</div>' for name in selected_winners]
-            )
+            html = "".join([f'<div class="multi-winner-item">🏆 {n}</div>' for n in winners])
+            draw.markdown(f'<div class="multi-winner-box"><div class="multi-winner-grid {cls}">{html}</div></div>', unsafe_allow_html=True)
 
-            draw_placeholder.markdown(
-                f"""
-                <div class="multi-winner-box">
-                    <div class="multi-winner-title">
-                        WINNERS FOR: {prize}
-                    </div>
-                    <div class="multi-winner-grid {grid_class}">
-                        {final_html}
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-        play_winner_sound(WINNER_SOUND_FILE)
+        play_winner_sound("winner.m4a")
         st.balloons()
 
-        for winner in selected_winners:
-            st.session_state.winners.append({
-                "Prize": prize,
-                "Name": winner
-            })
-
-            update_metrics()
-
-            if not st.session_state.host_mode and remaining_placeholder is not None:
-                render_remaining_list(remaining_placeholder)
-
+        for w in winners:
+            st.session_state.winners.append({"Prize": st.session_state.prize, "Name": w})
+            refresh()
             time.sleep(0.2)
 
 # -------------------------
-# Winner Board
+# ADMIN TABLES
 # -------------------------
 if not st.session_state.host_mode:
-    winner_board_placeholder = st.empty()
-    render_winner_board(winner_board_placeholder)
+
+    st.subheader("Participants")
+    if st.session_state.participants:
+        df = pd.DataFrame(st.session_state.participants, columns=["Name"])
+        df.index += 1
+        st.dataframe(df, height=300)
+
+    st.subheader("Remaining")
+    rem = remaining()
+    if rem:
+        df = pd.DataFrame(rem, columns=["Name"])
+        df.index += 1
+        st.dataframe(df, height=300)
+
+    st.subheader("Winners")
+    if st.session_state.winners:
+        df = pd.DataFrame(st.session_state.winners)
+        df.index += 1
+        st.dataframe(df)
+
+        st.download_button(
+            "Download CSV",
+            df.to_csv(index=False).encode(),
+            "winners.csv"
+        )
