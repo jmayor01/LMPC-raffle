@@ -238,16 +238,29 @@ if start:
         cls = grid(len(winners))
 
         # animation
-        for _ in range(50):
+        draw_duration = 4  # seconds (draw delay)
+
+        start_time = time.time()
+        
+        while time.time() - start_time < draw_duration:
+        
             sample = [secrets.choice(avail) for _ in range(min(len(winners), len(avail)))]
-
+        
             if len(winners) == 1:
-                draw.markdown(f'<div class="winner-box">{sample[0]}</div>', unsafe_allow_html=True)
+                draw.markdown(
+                    f'<div class="winner-box">{sample[0]}</div>',
+                    unsafe_allow_html=True
+                )
             else:
-                html = "".join([f'<div class="multi-winner-item">{n}</div>' for n in sample])
-                draw.markdown(f'<div class="multi-winner-box"><div class="multi-winner-grid {cls}">{html}</div></div>', unsafe_allow_html=True)
-
-            time.sleep(0.015)
+                html = "".join(
+                    [f'<div class="multi-winner-item">{n}</div>' for n in sample]
+                )
+                draw.markdown(
+                    f'<div class="multi-winner-box"><div class="multi-winner-grid {cls}">{html}</div></div>',
+                    unsafe_allow_html=True
+                )
+        
+            time.sleep(0.02)  # frame speed
 
         # final display
         if len(winners) == 1:
