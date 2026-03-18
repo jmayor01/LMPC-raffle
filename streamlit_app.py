@@ -238,7 +238,7 @@ if start:
         cls = grid(len(winners))
 
         # animation
-        for _ in range(40):
+        for _ in range(50):
             sample = [secrets.choice(avail) for _ in range(min(len(winners), len(avail)))]
 
             if len(winners) == 1:
@@ -247,7 +247,7 @@ if start:
                 html = "".join([f'<div class="multi-winner-item">{n}</div>' for n in sample])
                 draw.markdown(f'<div class="multi-winner-box"><div class="multi-winner-grid {cls}">{html}</div></div>', unsafe_allow_html=True)
 
-            time.sleep(0.015)
+            time.sleep(0.01)
 
         # final display
         if len(winners) == 1:
